@@ -2,6 +2,7 @@
 # react-native-view-shot ![](https://img.shields.io/npm/v/react-native-view-shot.svg) ![](https://img.shields.io/badge/react--native-%2040+-05F561.svg)
 
 Snapshot a React Native view and save it to an image.
+Support capture full content of webview.
 
 <img src="https://github.com/gre/react-native-view-shot-example/raw/master/docs/recursive.gif" width=300 />
 
@@ -12,7 +13,7 @@ Snapshot a React Native view and save it to an image.
 ```js
 import RNViewShot from "react-native-view-shot";
 
-RNViewShot.takeSnapshot(viewRef, {
+RNViewShot.takeSnapshot(this._view, {
   format: "jpeg",
   quality: 0.8
 })
@@ -38,12 +39,13 @@ Returns a Promise of the image URI.
  - **`format`** *(string)*: either `png` or `jpg`/`jpeg` or `webm` (Android). Defaults to `png`.
  - **`quality`** *(number)*: the quality. 0.0 - 1.0 (default). (only available on lossy formats like jpeg)
  - **`fullScreen`** *(boolean)*: capture the whole view when capturing webview.
- - **`scrollContent`** *(boolean)*: automatically scroll webview and capture.( only available when *fullScreen* is *true*).
+ - **`scrollContent`** *(boolean)*: automatically scroll webview and capture.( only available when `fullScreen` is `true`).
  - **`result`** *(string)*, the method you want to use to save the snapshot, one of:
     - `"file"` (default): save to a temporary file *(that will only exist for as long as the app is running)*.
     - `"base64"`: encode as base64 and returns the raw string. Use only with small images as this may result of lags (the string is sent over the bridge). *N.B. This is not a data uri, use `data-uri` instead*.
     - `"data-uri"`: same as `base64` but also includes the [Data URI scheme](https://en.wikipedia.org/wiki/Data_URI_scheme) header.
  - **`filename`** *(string)*: the name of the generated file if any (Android only). Defaults to `ReactNative_snapshot_image_${timestamp}`.
+ - **`snapshotContentContainer`** *(bool)*: if true and when view is a ScrollView, the "content container" height will be evaluated instead of the container height. (Android only)
 
 ## Caveats
 
