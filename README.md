@@ -39,7 +39,7 @@ Returns a Promise of the image URI.
  - **`format`** *(string)*: either `png` or `jpg`/`jpeg` or `webm` (Android). Defaults to `png`.
  - **`quality`** *(number)*: the quality. 0.0 - 1.0 (default). (only available on lossy formats like jpeg)
  - **`fullScreen`** *(boolean)*: capture the whole view when capturing webview.
- - **`scrollContent`** *(boolean)*: automatically scroll webview and capture.( only available when `fullScreen` is `true`).
+ - **`scrollContent`** *(boolean)*: automatically scroll webview and capture.( only available when `fullScreen` is `true`). (iOS only)
  - **`result`** *(string)*, the method you want to use to save the snapshot, one of:
     - `"file"` (default): save to a temporary file *(that will only exist for as long as the app is running)*.
     - `"base64"`: encode as base64 and returns the raw string. Use only with small images as this may result of lags (the string is sent over the bridge). *N.B. This is not a data uri, use `data-uri` instead*.
@@ -48,6 +48,8 @@ Returns a Promise of the image URI.
  - **`snapshotContentContainer`** *(bool)*: if true and when view is a ScrollView, the "content container" height will be evaluated instead of the container height. (Android only)
 
 ## Caveats
+
+If you want to snapshot a **WebView**, you need to embed the webview in a **View** and takeSnapshot of the view.
 
 Snapshots are not guaranteed to be pixel perfect. It also depends on the platform. Here is some difference we have noticed and how to workaround.
 
@@ -58,7 +60,8 @@ Snapshots are not guaranteed to be pixel perfect. It also depends on the platfor
 
 - you need to make sure `collapsable` is set to `false` if you want to snapshot a **View**. Otherwise that view won't reflect any UI View. ([found by @gaguirre](https://github.com/gre/react-native-view-shot/issues/7#issuecomment-245302844))
 - if you want to share out the screenshoted file, you will have to copy it somewhere first so it's accessible to an Intent, see comment: https://github.com/gre/react-native-view-shot/issues/11#issuecomment-251080804 .
--  if you implement a third party library and want to get back a File, you must first resolve the `Uri`. the `file` result returns an `Uri` so it's consistent with iOS and you can give it to `Image.getSize` for instance.
+- if you implement a third party library and want to get back a File, you must first resolve the `Uri`. the `file` result returns an `Uri` so it's consistent with iOS and you can give it to `Image.getSize` for instance.
+- if you run on Android L or above, and want to snapshot full content of **WebView**, you need to call `WebView.enableSlowWholeDocumentDraw()` in your `onCreate()` of `MainApplication.java` file. Otherwise it only snapshot the visible area.
 
 ## Getting started
 

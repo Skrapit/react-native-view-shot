@@ -2,23 +2,27 @@ package fr.greweb.reactnativeviewshot;
 
 import javax.annotation.Nullable;
 
-import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.util.Base64;
 import android.view.View;
+import android.webkit.WebView;
 import android.widget.ScrollView;
+import android.view.View.MeasureSpec;
 
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.uimanager.UIBlock;
+import com.facebook.react.views.view.ReactViewGroup;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
 
 /**
  * Snapshot utility class allow to screenshot a view.
@@ -37,6 +41,7 @@ public class ViewShot implements UIBlock {
     private String result;
     private Promise promise;
     private Boolean snapshotContentContainer;
+    private Boolean fullScreen;
 
     public ViewShot(
             int tag,
@@ -48,6 +53,7 @@ public class ViewShot implements UIBlock {
             File output,
             String result,
             Boolean snapshotContentContainer,
+            Boolean fullScreen,
             Promise promise) {
         this.tag = tag;
         this.extension = extension;
@@ -58,6 +64,7 @@ public class ViewShot implements UIBlock {
         this.output = output;
         this.result = result;
         this.snapshotContentContainer = snapshotContentContainer;
+        this.fullScreen = fullScreen;
         this.promise = promise;
     }
 
@@ -123,17 +130,42 @@ public class ViewShot implements UIBlock {
             throw new RuntimeException("Impossible to snapshot the view: view is invalid");
         }
 
-        //evaluate real height
-        if (this.snapshotContentContainer){
-            h=0;
-            ScrollView scrollView = (ScrollView)view;
-            for (int i = 0; i < scrollView.getChildCount(); i++) {
-                h += scrollView.getChildAt(i).getHeight();
+        Bitmap bitmap = null;
+        if (this.fullScreen){
+            // Snapshot full content of webview
+            ReactViewGroup viewGroup = (ReactViewGroup)view;
+            if (viewGroup.getChildCount() > 0 && (viewGroup.getChildAt(0) instanceof WebView)) {
+                WebView webView = (WebView)viewGroup.getChildAt(0);
+                webView.measure(MeasureSpec.makeMeasureSpec(
+                        View.MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED),
+                        MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+                webView.layout(0, 0, webView.getMeasuredWidth(), webView.getMeasuredHeight());
+                webView.setDrawingCacheEnabled(true);
+                webView.buildDrawingCache();
+                bitmap = Bitmap.createBitmap(webView.getMeasuredWidth(),
+                        webView.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
+
+                Canvas canvas = new Canvas(bitmap);
+                Paint paint = new Paint();
+                int iHeight = bitmap.getHeight();
+                canvas.drawBitmap(bitmap, 0, iHeight, paint);
+                webView.draw(canvas);
+                webView.setDrawingCacheEnabled(false);
             }
+        } else {
+            if (this.snapshotContentContainer) {
+                //evaluate real height
+                h = 0;
+                ScrollView scrollView = (ScrollView) view;
+                for (int i = 0; i < scrollView.getChildCount(); i++) {
+                    h += scrollView.getChildAt(i).getHeight();
+                }
+            }
+
+            bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            Canvas c = new Canvas(bitmap);
+            view.draw(c);
         }
-        Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(bitmap);
-        view.draw(c);
 
         if (width != null && height != null && (width != w || height != h)) {
             bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);

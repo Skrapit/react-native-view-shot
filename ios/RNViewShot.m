@@ -107,16 +107,20 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     };
 
     // Start capture
-    if (isFullScreen && ([contentView isKindOfClass: [RCTWebView class]])) {
-      UIView *scrollView = ((UIWebView *)contentView.subviews[0]).scrollView;
-      if (isScrollContent) {
-        [self captureScrollContent:scrollView withHandler:^(UIImage *image) {
-          captureHandler(image, resolve, reject);
-        }];
-      } else {
-        [self captureContent:scrollView withHandler:^(UIImage *image) {
-          captureHandler(image, resolve, reject);
-        }];
+    if (isFullScreen) {
+      // Snapshot full content of webview
+      if ([contentView isKindOfClass:[RCTView class]] && contentView.subviews.count > 0 && [contentView.subviews[0] isKindOfClass:[RCTWebView class]]) {
+        RCTWebView *rctWebView = contentView.subviews[0];
+        UIView *scrollView = ((UIWebView *)rctWebView.subviews[0]).scrollView;
+        if (isScrollContent) {
+          [self captureScrollContent:scrollView withHandler:^(UIImage *image) {
+            captureHandler(image, resolve, reject);
+          }];
+        } else {
+          [self captureContent:scrollView withHandler:^(UIImage *image) {
+            captureHandler(image, resolve, reject);
+          }];
+        }
       }
     } else {
       UIGraphicsBeginImageContextWithOptions(size, NO, 0);
