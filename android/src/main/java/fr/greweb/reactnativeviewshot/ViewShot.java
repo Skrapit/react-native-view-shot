@@ -41,7 +41,7 @@ public class ViewShot implements UIBlock {
     private String result;
     private Promise promise;
     private Boolean snapshotContentContainer;
-    private Boolean fullScreen;
+    private Boolean fullWebView;
 
     public ViewShot(
             int tag,
@@ -53,7 +53,7 @@ public class ViewShot implements UIBlock {
             File output,
             String result,
             Boolean snapshotContentContainer,
-            Boolean fullScreen,
+            Boolean fullWebView,
             Promise promise) {
         this.tag = tag;
         this.extension = extension;
@@ -64,7 +64,7 @@ public class ViewShot implements UIBlock {
         this.output = output;
         this.result = result;
         this.snapshotContentContainer = snapshotContentContainer;
-        this.fullScreen = fullScreen;
+        this.fullWebView = fullWebView;
         this.promise = promise;
     }
 
@@ -131,7 +131,7 @@ public class ViewShot implements UIBlock {
         }
 
         Bitmap bitmap = null;
-        if (this.fullScreen){
+        if (this.fullWebView){
             // Snapshot full content of webview
             ReactViewGroup viewGroup = (ReactViewGroup)view;
             if (viewGroup.getChildCount() > 0 && (viewGroup.getChildAt(0) instanceof WebView)) {

@@ -43,7 +43,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     CGSize size = [RCTConvert CGSize:options];
     NSString *format = [RCTConvert NSString:options[@"format"] ?: @"png"];
     NSString *result = [RCTConvert NSString:options[@"result"] ?: @"file"];
-    BOOL isFullScreen = [RCTConvert BOOL:options[@"fullScreen"] ?: NO];
+    BOOL isFullWebView = [RCTConvert BOOL:options[@"fullWebView"] ?: NO];
     BOOL isScrollContent = [RCTConvert BOOL:options[@"scrollContent"] ?: NO];
     
     // Capture image
@@ -107,7 +107,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     };
 
     // Start capture
-    if (isFullScreen) {
+    if (isFullWebView) {
       // Snapshot full content of webview
       if ([contentView isKindOfClass:[RCTView class]] && contentView.subviews.count > 0 && [contentView.subviews[0] isKindOfClass:[RCTWebView class]]) {
         RCTWebView *rctWebView = contentView.subviews[0];
