@@ -153,7 +153,7 @@ public class ViewShot implements UIBlock {
                 webView.setDrawingCacheEnabled(false);
             }
         } else {
-            if (this.snapshotContentContainer) {
+            if (snapshotContentContainer) {
                 //evaluate real height
                 h = 0;
                 ScrollView scrollView = (ScrollView) view;
