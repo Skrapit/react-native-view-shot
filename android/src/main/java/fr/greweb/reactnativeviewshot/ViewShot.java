@@ -42,6 +42,10 @@ public class ViewShot implements UIBlock {
     private Promise promise;
     private Boolean snapshotContentContainer;
     private Boolean fullWebView;
+    private Integer areaX;
+    private Integer areaY;
+    private Integer areaWidth;
+    private Integer areaHeight;
 
     public ViewShot(
             int tag,
@@ -54,6 +58,10 @@ public class ViewShot implements UIBlock {
             String result,
             Boolean snapshotContentContainer,
             Boolean fullWebView,
+            @Nullable Integer areaX,
+            @Nullable Integer areaY,
+            @Nullable Integer areaWidth,
+            @Nullable Integer areaHeight,
             Promise promise) {
         this.tag = tag;
         this.extension = extension;
@@ -65,6 +73,10 @@ public class ViewShot implements UIBlock {
         this.result = result;
         this.snapshotContentContainer = snapshotContentContainer;
         this.fullWebView = fullWebView;
+        this.areaX = areaX;
+        this.areaY = areaY;
+        this.areaWidth = areaWidth;
+        this.areaHeight = areaHeight;
         this.promise = promise;
     }
 
@@ -130,8 +142,20 @@ public class ViewShot implements UIBlock {
             throw new RuntimeException("Impossible to snapshot the view: view is invalid");
         }
 
+        if (areaX == null || areaX < 0) {
+            areaX = 0;
+        }
+        if (areaY == null || areaY < 0) {
+            areaY = 0;
+        }
+        if (areaWidth == null || areaWidth < 0.1) {
+            areaWidth = w;
+        }
+        if (areaHeight == null || areaHeight < 0.1) {
+            areaHeight = 0;
+        }
         Bitmap bitmap = null;
-        if (this.fullWebView){
+        if (fullWebView){
             // Snapshot full content of webview
             ReactViewGroup viewGroup = (ReactViewGroup)view;
             if (viewGroup.getChildCount() > 0 && (viewGroup.getChildAt(0) instanceof WebView)) {
@@ -167,6 +191,9 @@ public class ViewShot implements UIBlock {
             view.draw(c);
         }
 
+        if (areaHeight > 0) {
+            bitmap = Bitmap.createBitmap(bitmap, areaX, areaY, areaWidth, areaHeight);
+        }
         if (width != null && height != null && (width != w || height != h)) {
             bitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
         }

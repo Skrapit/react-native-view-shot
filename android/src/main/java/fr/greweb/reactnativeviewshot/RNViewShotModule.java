@@ -74,6 +74,11 @@ public class RNViewShotModule extends ReactContextBaseJavaModule {
         String result = options.hasKey("result") ? options.getString("result") : "file";
         Boolean snapshotContentContainer = options.hasKey("snapshotContentContainer") ? options.getBoolean("snapshotContentContainer") : false;
         Boolean fullWebView = options.hasKey("fullWebView") ? options.getBoolean("fullWebView") : false;
+        Integer areaX = options.hasKey("areaX") ? (int)(displayMetrics.density * options.getDouble("areaX")) : null;
+        Integer areaY = options.hasKey("areaY") ? (int)(displayMetrics.density * options.getDouble("areaY")) : null;
+        Integer areaWidth = options.hasKey("areaWidth") ? (int)(displayMetrics.density * options.getDouble("areaWidth")) : null;
+        Integer areaHeight = options.hasKey("areaHeight") ? (int)(displayMetrics.density * options.getDouble("areaHeight")) : null;
+
 
         try {
             File file = null;
@@ -87,7 +92,7 @@ public class RNViewShotModule extends ReactContextBaseJavaModule {
                 }
             }
             UIManagerModule uiManager = this.reactContext.getNativeModule(UIManagerModule.class);
-            uiManager.addUIBlock(new ViewShot(tag, format, compressFormat, quality, width, height, file, result, snapshotContentContainer, fullWebView, promise));
+            uiManager.addUIBlock(new ViewShot(tag, format, compressFormat, quality, width, height, file, result, snapshotContentContainer, fullWebView, areaX, areaY, areaWidth, areaHeight, promise));
         }
         catch (Exception e) {
             promise.reject(ViewShot.ERROR_UNABLE_TO_SNAPSHOT, "Failed to snapshot view tag "+tag);
