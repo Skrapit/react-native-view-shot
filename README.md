@@ -37,7 +37,7 @@ Returns a Promise of the image URI.
 - **`view`** is a reference to a React Native component.
 - **`options`** may include:
  - **`width`** / **`height`** *(number)*: the width and height of the image to capture.
- - **`areaX`** / **`areaY`** / **`areaWidth`** / **`areaHeight`** *(number)*: the specified area that you want to snapshot in a view. `areaX`** / **`areaY` indicates the upper-left corner. 
+ - **`areaX`** / **`areaY`** / **`areaWidth`** / **`areaHeight`** *(number)*: the specified area that you want to snapshot in a view. `areaX` / `areaY` indicates the upper-left corner. 
  - **`format`** *(string)*: either `png` or `jpg`/`jpeg` or `webp` (Android). Defaults to `png`.
  - **`quality`** *(number)*: the quality. 0.0 - 1.0 (default). (only available on lossy formats like jpeg)
  - **`fullWebView`** *(boolean)*: capture the whole view when capturing webview.
