@@ -74,8 +74,12 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         
         BOOL success = NO;
         UIImage *image = nil;
-        UIView *contentView = view.subviews[0];
         
+        UIView *contentView = view;
+        if (view.subviews.count > 0) {
+            contentView = view.subviews[0];
+            
+        }
         // Captured image handler
         void (^captureHandler)(UIImage *, RCTPromiseResolveBlock, RCTPromiseRejectBlock) = ^void(UIImage *image, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject) {
             // Convert image to data (on a background thread)
