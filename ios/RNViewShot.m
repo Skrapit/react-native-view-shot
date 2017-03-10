@@ -61,6 +61,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         double areaY = [RCTConvert double:options[@"areaY"] ?: @0.0];
         double areaWidth = [RCTConvert double:options[@"areaWidth"] ?: @(view.bounds.size.width)];
         double areaHeight = [RCTConvert double:options[@"areaHeight"] ?: @(0.0)];
+        BOOL isWebViewOverflow = [RCTConvert BOOL:options[@"isWebViewOverflow"] ?: NO];
         
         // Capture image
         if (size.width < 0.1 || size.height < 0.1) {
@@ -156,6 +157,13 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
             if ([contentView isKindOfClass:[RCTView class]] && contentView.subviews.count > 0 && [contentView.subviews[0] isKindOfClass:[RCTWebView class]]) {
                 RCTWebView *rctWebView = contentView.subviews[0];
                 UIView *scrollView = ((UIWebView *)rctWebView.subviews[0]).scrollView;
+                if (isWebViewOverflow) {
+                    if (scrollView.subviews.count > 0) {
+                        if (scrollView.subviews[0].subviews.count > 0) {
+                            scrollView = ((UIView*)scrollView.subviews[0]).subviews[0];
+                        }
+                    }
+                }
                 if (isScrollContent) {
                     [self captureScrollContent:scrollView withHandler:^(UIImage *image) {
                         captureHandler(image, resolve, reject);
