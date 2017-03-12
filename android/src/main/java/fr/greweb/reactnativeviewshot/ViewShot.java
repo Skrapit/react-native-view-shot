@@ -191,7 +191,7 @@ public class ViewShot implements UIBlock {
             view.draw(c);
         }
 
-        if (areaHeight > 0) {
+        if (areaHeight > 0 && bitmap.getWidth() >= areaX && bitmap.getHeight() >= areaHeight) {
             bitmap = Bitmap.createBitmap(bitmap, areaX, areaY, areaWidth, areaHeight);
         }
         if (width != null && height != null && (width != w || height != h)) {
