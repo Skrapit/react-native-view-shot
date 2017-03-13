@@ -89,7 +89,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
                 CGFloat scale = [[UIScreen mainScreen] scale];
                 CGRect rect = CGRectMake(areaX * scale, areaY * scale, areaWidth * scale, areaHeight * scale);
                 UIImage *resultImg = image;
-                if (areaHeight > 0.0 && image.size.height * scale > rect.origin.y + rect.size.height) {
+                if (areaHeight > 0.0 && (image.size.height * scale > rect.origin.y + rect.size.height)) {
                     resultImg = [UIImage imageWithCGImage:CGImageCreateWithImageInRect(image.CGImage, rect)];
                 }
                 
