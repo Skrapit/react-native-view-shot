@@ -9,6 +9,7 @@
 #import <React/RCTBridge.h>
 #import <React/RCTWebView.h>
 #import <objc/runtime.h>
+#import <WebKit/WebKit.h>
 
 @implementation RNViewShot
 
@@ -154,9 +155,18 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         // Start capture
         if (isFullWebView) {
             // Snapshot full content of webview
-            if ([contentView isKindOfClass:[RCTView class]] && contentView.subviews.count > 0 && [contentView.subviews[0] isKindOfClass:[RCTWebView class]]) {
-                RCTWebView *rctWebView = contentView.subviews[0];
-                UIView *scrollView = ((UIWebView *)rctWebView.subviews[0]).scrollView;
+            if ([contentView isKindOfClass:[RCTView class]] && contentView.subviews.count > 0) {
+                UIView *scrollView = nil;
+                
+                if ([contentView.subviews[0] isKindOfClass:[RCTWebView class]]) {
+                    RCTWebView *rctWebView = contentView.subviews[0];
+                    scrollView = ((UIWebView *)rctWebView.subviews[0]).scrollView;
+                } else if ([contentView.subviews[0] isKindOfClass:[RCTView class]]) {
+                    RCTView *rctView = contentView.subviews[0];
+                    if (rctView.subviews.count > 0) {
+                        scrollView = ((WKWebView *)rctView.subviews[0]).scrollView;
+                    }
+                }
                 if (isWebViewOverflow) {
                     if (scrollView.subviews.count > 0) {
                         if (scrollView.subviews[0].subviews.count > 0) {
@@ -164,14 +174,16 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
                         }
                     }
                 }
-                if (isScrollContent) {
-                    [self captureScrollContent:scrollView withHandler:^(UIImage *image) {
-                        captureHandler(image, resolve, reject);
-                    }];
-                } else {
-                    [self captureContent:scrollView withHandler:^(UIImage *image) {
-                        captureHandler(image, resolve, reject);
-                    }];
+                if (scrollView) {
+                    if (isScrollContent) {
+                        [self captureScrollContent:scrollView withHandler:^(UIImage *image) {
+                            captureHandler(image, resolve, reject);
+                        }];
+                    } else {
+                        [self captureContent:scrollView withHandler:^(UIImage *image) {
+                            captureHandler(image, resolve, reject);
+                        }];
+                    }
                 }
             }
         } else {
