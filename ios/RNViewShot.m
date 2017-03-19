@@ -1,4 +1,3 @@
-
 #import "RNViewShot.h"
 #import <AVFoundation/AVFoundation.h>
 #import <React/RCTLog.h>
@@ -62,7 +61,10 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         double areaY = [RCTConvert double:options[@"areaY"] ?: @0.0];
         double areaWidth = [RCTConvert double:options[@"areaWidth"] ?: @(view.bounds.size.width)];
         double areaHeight = [RCTConvert double:options[@"areaHeight"] ?: @(0.0)];
-        BOOL isWebViewOverflow = [RCTConvert BOOL:options[@"isWebViewOverflow"] ?: NO];
+        int singleImageMaxPage = [RCTConvert int:options[@"singleImageMaxPage"] ?: @(0)];
+        if (singleImageMaxPage < 0) {
+            singleImageMaxPage = 0;
+        }
         
         // Capture image
         if (size.width < 0.1 || size.height < 0.1) {
@@ -80,75 +82,90 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         UIView *contentView = view;
         if (view.subviews.count > 0) {
             contentView = view.subviews[0];
-            
         }
         // Captured image handler
-        void (^captureHandler)(UIImage *, RCTPromiseResolveBlock, RCTPromiseRejectBlock) = ^void(UIImage *image, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject) {
+        void (^captureHandler)(NSArray *, RCTPromiseResolveBlock, RCTPromiseRejectBlock) = ^void(NSArray *imageArray, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject) {
             // Convert image to data (on a background thread)
+            __block NSMutableArray *resultArray = [[NSMutableArray alloc] init];
             dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
                 
-                CGFloat scale = [[UIScreen mainScreen] scale];
-                CGRect rect = CGRectMake(areaX * scale, areaY * scale, areaWidth * scale, areaHeight * scale);
-                UIImage *resultImg = image;
-                if (areaHeight > 0.0 && (image.size.height * scale > rect.origin.y + rect.size.height)) {
-                    resultImg = [UIImage imageWithCGImage:CGImageCreateWithImageInRect(image.CGImage, rect)];
-                }
-                
-                NSData *data;
-                if ([format isEqualToString:@"png"]) {
-                    data = UIImagePNGRepresentation(resultImg);
-                } else if ([format isEqualToString:@"jpeg"] || [format isEqualToString:@"jpg"]) {
-                    CGFloat quality = [RCTConvert CGFloat:options[@"quality"] ?: @1];
-                    data = UIImageJPEGRepresentation(resultImg, quality);
-                } else {
-                    reject(RCTErrorUnspecified, [NSString stringWithFormat:@"Unsupported image format: %@. Try one of: png | jpg | jpeg", format], nil);
-                    return;
-                }
-                
-                NSError *error = nil;
-                NSString *res = nil;
-                if ([result isEqualToString:@"file"]) {
-                    // Save to a temp file
-                    NSString *path;
-                    if (options[@"path"]) {
-                        path = options[@"path"];
-                        NSString * folder = [path stringByDeletingLastPathComponent];
-                        NSFileManager * fm = [NSFileManager defaultManager];
-                        if(![fm fileExistsAtPath:folder]) {
-                            [fm createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:NULL error:&error];
+                for (UIImage *image in imageArray) {
+                    
+                    CGFloat scale = [[UIScreen mainScreen] scale];
+                    CGRect rect = CGRectMake(areaX * scale, areaY * scale, areaWidth * scale, areaHeight * scale);
+                    UIImage *resultImg = image;
+                    if (areaHeight > 0.0 && (image.size.height * scale > rect.origin.y + rect.size.height)) {
+                        resultImg = [UIImage imageWithCGImage:CGImageCreateWithImageInRect(image.CGImage, rect)];
+                    }
+                    
+                    NSData *data;
+                    if ([format isEqualToString:@"png"]) {
+                        data = UIImagePNGRepresentation(resultImg);
+                    } else if ([format isEqualToString:@"jpeg"] || [format isEqualToString:@"jpg"]) {
+                        CGFloat quality = [RCTConvert CGFloat:options[@"quality"] ?: @1];
+                        data = UIImageJPEGRepresentation(resultImg, quality);
+                    } else {
+                        reject(RCTErrorUnspecified, [NSString stringWithFormat:@"Unsupported image format: %@. Try one of: png | jpg | jpeg", format], nil);
+                        return;
+                    }
+                    
+                    NSError *error = nil;
+                    NSString *res = nil;
+                    if ([result isEqualToString:@"file"]) {
+                        // Save to a temp file
+                        NSString *path;
+                        if (options[@"path"]) {
+                            path = options[@"path"];
+                            NSString * folder = [path stringByDeletingLastPathComponent];
+                            NSFileManager * fm = [NSFileManager defaultManager];
+                            if(![fm fileExistsAtPath:folder]) {
+                                [fm createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:NULL error:&error];
+                                [fm createFileAtPath:path contents:nil attributes:nil];
+                            }
+                        } else if(options[@"folder"]) {
+                            NSString *folder = options[@"folder"];
+                            NSFileManager * fm = [NSFileManager defaultManager];
+                            if(![fm fileExistsAtPath:folder]) {
+                                [fm createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:NULL error:&error];
+                            }
+                            NSString *fileName = [RCTTempFilePath(format, &error) lastPathComponent];
+                            path = [folder stringByAppendingPathComponent:fileName];
                             [fm createFileAtPath:path contents:nil attributes:nil];
+                        } else {
+                            path = RCTTempFilePath(format, &error);
                         }
+                        if (path && !error) {
+                            if ([data writeToFile:path options:(NSDataWritingOptions)0 error:&error]) {
+                                res = path;
+                            }
+                        }
+                    }
+                    else if ([result isEqualToString:@"base64"]) {
+                        // Return as a base64 raw string
+                        res = [data base64EncodedStringWithOptions: NSDataBase64Encoding64CharacterLineLength];
+                    }
+                    else if ([result isEqualToString:@"data-uri"]) {
+                        // Return as a base64 data uri string
+                        NSString *base64 = [data base64EncodedStringWithOptions: NSDataBase64Encoding64CharacterLineLength];
+                        res = [NSString stringWithFormat:@"data:image/%@;base64,%@", format, base64];
                     }
                     else {
-                        path = RCTTempFilePath(format, &error);
+                        reject(RCTErrorUnspecified, [NSString stringWithFormat:@"Unsupported result: %@. Try one of: file | base64 | data-uri", result], nil);
+                        return;
                     }
-                    if (path && !error) {
-                        if ([data writeToFile:path options:(NSDataWritingOptions)0 error:&error]) {
-                            res = path;
-                        }
+                    if (res && !error) {
+                        [resultArray addObject:res];
+                        continue;
                     }
+                    
+                    // If we reached here, something went wrong
+                    if (error) reject(RCTErrorUnspecified, error.localizedDescription, error);
+                    else reject(RCTErrorUnspecified, @"viewshot unknown error", nil);
                 }
-                else if ([result isEqualToString:@"base64"]) {
-                    // Return as a base64 raw string
-                    res = [data base64EncodedStringWithOptions: NSDataBase64Encoding64CharacterLineLength];
-                }
-                else if ([result isEqualToString:@"data-uri"]) {
-                    // Return as a base64 data uri string
-                    NSString *base64 = [data base64EncodedStringWithOptions: NSDataBase64Encoding64CharacterLineLength];
-                    res = [NSString stringWithFormat:@"data:image/%@;base64,%@", format, base64];
-                }
-                else {
-                    reject(RCTErrorUnspecified, [NSString stringWithFormat:@"Unsupported result: %@. Try one of: file | base64 | data-uri", result], nil);
+                if (resultArray.count > 0) {
+                    resolve(resultArray);
                     return;
                 }
-                if (res && !error) {
-                    resolve(res);
-                    return;
-                }
-                
-                // If we reached here, something went wrong
-                if (error) reject(RCTErrorUnspecified, error.localizedDescription, error);
-                else reject(RCTErrorUnspecified, @"viewshot unknown error", nil);
             });
         };
         
@@ -167,21 +184,14 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
                         scrollView = ((WKWebView *)rctView.subviews[0]).scrollView;
                     }
                 }
-                if (isWebViewOverflow) {
-                    if (scrollView.subviews.count > 0) {
-                        if (scrollView.subviews[0].subviews.count > 0) {
-                            scrollView = ((UIView*)scrollView.subviews[0]).subviews[0];
-                        }
-                    }
-                }
                 if (scrollView) {
-                    if (isScrollContent) {
-                        [self captureScrollContent:scrollView withHandler:^(UIImage *image) {
-                            captureHandler(image, resolve, reject);
+                    if (singleImageMaxPage > 0 || isScrollContent) {
+                        [self captureScrollContent:scrollView singleImageMaxPage: singleImageMaxPage withHandler:^(NSArray *imageArray) {
+                            captureHandler(imageArray, resolve, reject);
                         }];
                     } else {
-                        [self captureContent:scrollView withHandler:^(UIImage *image) {
-                            captureHandler(image, resolve, reject);
+                        [self captureContent:scrollView withHandler:^(NSArray *imageArray) {
+                            captureHandler(imageArray, resolve, reject);
                         }];
                     }
                 }
@@ -202,7 +212,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     }];
 }
 
-- (void)captureContent:(UIScrollView *)target withHandler:(void (^)(UIImage *capturedImage))completionHandler {
+- (void)captureContent:(UIScrollView *)target withHandler:(void (^)(NSArray *capturedImageArray))completionHandler {
     
     //Put a fake Cover of View
     UIView *snapshotView = [target snapshotViewAfterScreenUpdates: NO];
@@ -220,6 +230,8 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         target.contentOffset = CGPointMake(0, target.contentSize.height - target.frame.size.height);
     }
     
+    NSMutableArray *capturedImageArray = [[NSMutableArray alloc] init];
+    
     [self renderImageView:target withHandler:^(UIImage *capturedImage) {
         [target removeFromSuperview];
         target.frame = bakFrame;
@@ -228,7 +240,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         
         [snapshotView removeFromSuperview];
         
-        completionHandler(capturedImage);
+        completionHandler([capturedImageArray copy]);
     }];
 }
 
@@ -247,7 +259,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     method_exchangeImplementations(method, swizzledMethod);
     
     // Sometimes ScrollView will Capture nothing without defer;
-    //  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    //  dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
     CGRect bounds = target.bounds;
     UIGraphicsBeginImageContextWithOptions(bounds.size, NO, [UIScreen mainScreen].scale);
     [target.layer renderInContext:UIGraphicsGetCurrentContext()];
@@ -259,8 +271,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
 }
 
 // Simulate People Action, all the `fixed` element will be repeate
-// SwContentCapture will capture all content without simulate people action, more perfect.
-- (void)captureScrollContent:(UIScrollView *)target withHandler:(void (^)(UIImage *capturedImage))completionHandler {
+- (void)captureScrollContent:(UIScrollView *)target singleImageMaxPage:(int)singleImageMaxPage withHandler:(void (^)(NSArray *capturedImageArray))completionHandler {
     
     //Put a fake Cover of View
     UIView *snapshotView = [target snapshotViewAfterScreenUpdates: NO];
@@ -273,17 +284,49 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     // Divide
     float page = floorf(target.contentSize.height / target.bounds.size.height);
     
-    UIGraphicsBeginImageContextWithOptions(target.contentSize, false, [UIScreen mainScreen].scale);
-    
-    [self contentScrollPageDraw:target index:0 maxIndex:(NSInteger)page drawHandler:^{
+    NSMutableArray *capturedImageArray = [[NSMutableArray alloc] init];
+    if (singleImageMaxPage > 0) {
+        [self captureScrollContent:target index:0 maxIndex:page singleImageMaxPage:singleImageMaxPage result:capturedImageArray withHandler:^{
+            // Recover
+            [target setContentOffset:bakOffset animated:NO];
+            [snapshotView removeFromSuperview];
+            completionHandler([capturedImageArray copy]);
+        }];
+    } else {
+        UIGraphicsBeginImageContextWithOptions(target.contentSize, NO, [UIScreen mainScreen].scale);
+        [self contentScrollPageDraw:target index:0 maxIndex:(NSInteger)page drawHandler:^{
+            UIImage * capturedImage = UIGraphicsGetImageFromCurrentImageContext();
+            UIGraphicsEndImageContext();
+            [capturedImageArray addObject:capturedImage];
+            // Recover
+            [target setContentOffset:bakOffset animated:NO];
+            [snapshotView removeFromSuperview];
+            completionHandler([capturedImageArray copy]);
+        }];
+    }
+}
+
+- (void)captureScrollContent:(UIScrollView *)target index:(NSInteger)index maxIndex:(NSInteger)page singleImageMaxPage:(NSInteger)singleImageMaxPage result:(NSMutableArray *)capturedImageArray withHandler:(void(^)())handler  {
+    NSInteger pageNum = MIN(singleImageMaxPage, MAX(1, page - index));
+    CGSize contextSize = CGSizeMake(target.frame.size.width, target.frame.size.height * pageNum);
+    UIGraphicsBeginImageContextWithOptions(target.contentSize, NO, [UIScreen mainScreen].scale);
+    [self contentScrollPageDraw:target index:index maxIndex:index+pageNum drawHandler:^{
         UIImage * capturedImage = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();
+        CGFloat scale = [[UIScreen mainScreen] scale];
+        float frameHeight = target.frame.size.height;
+        CGRect rect = CGRectMake(0, index * frameHeight * scale, target.frame.size.width * scale, pageNum * frameHeight * scale);
+        UIImage *resultImg = [UIImage imageWithCGImage:CGImageCreateWithImageInRect(capturedImage.CGImage, rect)];
+        [capturedImageArray addObject:resultImg];
         
-        // Recover
-        [target setContentOffset:bakOffset animated:NO];
-        [snapshotView removeFromSuperview];
-        completionHandler(capturedImage);
+        if (index + pageNum < page) {
+            [self captureScrollContent:target index:index + pageNum maxIndex:page singleImageMaxPage:singleImageMaxPage result:capturedImageArray withHandler:handler];
+        } else {
+            handler();
+        }
+        
     }];
+    
 }
 
 - (void)contentScrollPageDraw:(UIScrollView *)target index:(NSInteger)index maxIndex:(NSInteger)maxIndex drawHandler:(void(^)())handler{
@@ -291,7 +334,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     
     CGRect splitFrame = CGRectMake(0, index * target.frame.size.height, target.bounds.size.width, target.bounds.size.height);
     
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         [target drawViewHierarchyInRect:splitFrame afterScreenUpdates:YES];
         if (index < maxIndex) {
             [self contentScrollPageDraw:target index:index + 1 maxIndex:maxIndex drawHandler:handler];
