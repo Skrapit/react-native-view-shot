@@ -62,6 +62,8 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         double areaWidth = [RCTConvert double:options[@"areaWidth"] ?: @(view.bounds.size.width)];
         double areaHeight = [RCTConvert double:options[@"areaHeight"] ?: @(0.0)];
         NSString *folder = [RCTConvert NSString:options[@"folder"] ?: nil];
+        BOOL overflowTouchScrollEnabled = [RCTConvert BOOL:options[@"overflowTouchScrollEnabled"] ?: NO];
+        
         int slicePage = [RCTConvert int:options[@"slicePage"] ?: @(0)];
         slicePage = MAX(0, slicePage);
         
@@ -178,6 +180,16 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
                     RCTView *rctView = contentView.subviews[0];
                     if (rctView.subviews.count > 0) {
                         scrollView = ((WKWebView *)rctView.subviews[0]).scrollView;
+                    }
+                }
+                if (overflowTouchScrollEnabled) {
+                    NSMutableArray *viewArray = [[NSMutableArray alloc] init];
+                    [self allSubViewsOfView:scrollView result:viewArray];
+                    for (UIView *view in viewArray) {
+                        if ([view isKindOfClass:[UIScrollView class]]) {
+                            scrollView = view;
+                            break;
+                        }
                     }
                 }
                 if (scrollView) {
@@ -387,6 +399,15 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         [bakSuperView insertSubview:target atIndex:bakIndex];
         [snapshotView removeFromSuperview];
     });
+}
+
+- (void)allSubViewsOfView:(UIView *)view result:(NSMutableArray *)result
+{
+    for (UIView *subview in view.subviews)
+    {
+        [result addObject:subview];
+        [self allSubViewsOfView:subview result:result];
+    }
 }
 
 

@@ -49,6 +49,7 @@ Returns a Promise of the image URI.
  - **`path`** *(string)*: The absolute path where the file get generated. See *`dirs` constants* for more information.
  - **`folder`** *(string)*: The folder where the file get generated in. See *`dirs` constants* for more information.
  - **`slicePage`** *(number)*: The max screen page that an image contains. The result will be an array of images. (only available when `scrollContent` is `true`)  (iOS only).
+ - **`overflowTouchScrollEnabled`** *(boolean)*: Indicates webview's attribute: `-webkit-overflow-scrolling:touch`.(only available when `fullWebView` is `true`, iOS only).
  - **`snapshotContentContainer`** *(bool)*: if true and when view is a ScrollView, the "content container" height will be evaluated instead of the container height. (Android only)
 
 ### `dirs` constants
