@@ -294,7 +294,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     CGPoint bakOffset = target.contentOffset;
     
     // Divide
-    float page = floorf(target.contentSize.height / target.bounds.size.height);
+    float page = ceilf(target.contentSize.height / target.bounds.size.height);
     
     NSMutableArray *capturedImageArray = [[NSMutableArray alloc] init];
     if (slicePage > 0) {
@@ -320,15 +320,12 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
 
 - (void)captureScrollContent:(UIScrollView *)target index:(NSInteger)index maxIndex:(NSInteger)page slicePage:(NSInteger)slicePage result:(NSMutableArray *)capturedImageArray withHandler:(void(^)())handler  {
     NSInteger pageNum = MIN(slicePage, MAX(1, page - index));
-    UIGraphicsBeginImageContextWithOptions(CGSizeMake(target.bounds.size.width, target.bounds.size.height * slicePage), NO, [UIScreen mainScreen].scale);
+    UIGraphicsBeginImageContextWithOptions(CGSizeMake(target.bounds.size.width, target.bounds.size.height * pageNum), NO, [UIScreen mainScreen].scale);
     
     [self contentScrollPageDraw:target index:index maxIndex:index+pageNum sliceIndex:0 drawHandler:^{
         
         UIImage * capturedImage = UIGraphicsGetImageFromCurrentImageContext();
         UIGraphicsEndImageContext();
-        CGFloat scale = [[UIScreen mainScreen] scale];
-        float frameHeight = target.frame.size.height;
-        CGRect rect = CGRectMake(0, index * frameHeight * scale, target.frame.size.width * scale, pageNum * frameHeight * scale);
         UIImage *resultImg = capturedImage;
         [capturedImageArray addObject:resultImg];
         
