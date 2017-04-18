@@ -369,10 +369,10 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
     UIView *bakSuperView = target.superview;
     NSInteger bakIndex = [target.superview.subviews indexOfObject:target];
     
-    // Scroll To Bottom show all cached view
-    if (target.frame.size.height < target.contentSize.height) {
-        target.contentOffset = CGPointMake(0, target.contentSize.height - target.frame.size.height);
-    }
+//     // Scroll To Bottom show all cached view
+//     if (target.frame.size.height < target.contentSize.height) {
+//         target.contentOffset = CGPointMake(0, target.contentSize.height - target.frame.size.height);
+//     }
     
     UIGraphicsBeginImageContextWithOptions(target.frame.size, NO, [[UIScreen mainScreen] scale]);
     [target setContentOffset:CGPointMake(0, area.origin.y) animated:NO];
