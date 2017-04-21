@@ -386,7 +386,7 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         UIGraphicsEndImageContext();
         
         CGFloat scale = [[UIScreen mainScreen] scale];
-        CGRect rect = CGRectMake(0, realOffsetY * scale,, area.size.width * scale, area.size.height * scale);
+        CGRect rect = CGRectMake(0, realOffsetY * scale, area.size.width * scale, area.size.height * scale);
         if (capturedImage.size.height * scale > rect.size.height) {
             capturedImage = [UIImage imageWithCGImage:CGImageCreateWithImageInRect(capturedImage.CGImage, rect)];
         }
