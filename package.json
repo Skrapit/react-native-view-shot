@@ -1,7 +1,7 @@
 {
   "name": "react-native-view-shot",
-  "version": "1.8.0",
-  "description": "Snapshot a React Native view and save it to an image",
+  "version": "1.9.1",
+  "description": "Capture a React Native view to an image",
   "main": "index.js",
   "keywords": [
     "react-native",
@@ -13,6 +13,10 @@
   ],
   "author": "Gaëtan Renaudeau <renaudeau.gaetan@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gre/react-native-view-shot.git"
+  },
   "peerDependencies": {
     "react-native": "*"
   }

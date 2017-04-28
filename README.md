@@ -1,12 +1,12 @@
 
 # react-native-view-shot ![](https://img.shields.io/npm/v/react-native-view-shot.svg) ![](https://img.shields.io/badge/react--native-%2040+-05F561.svg)
 
-Snapshot a React Native view and save it to an image.
+Capture a React Native view to an image.
 Support capture full content of webview.
 
 <img src="https://github.com/gre/react-native-view-shot-example/raw/master/docs/recursive.gif" width=300 />
 
-> For React Native version between `0.30.x` and `0.39.x`, you should use `react-native-view-shot@1.5.1`.
+> iOS: For React Native version between `0.30.x` and `0.39.x`, you should use `react-native-view-shot@1.5.1`.
 
 ## Usage
 
@@ -38,7 +38,7 @@ Returns a Promise of the image URI.
 - **`options`** may include:
  - **`width`** / **`height`** *(number)*: the width and height of the image to capture.
  - **`areaX`** / **`areaY`** / **`areaWidth`** / **`areaHeight`** *(number)*: the specified area that you want to snapshot in a view. `areaX` / `areaY` indicates the upper-left corner.  (The maximum areaHeight would be screen height)
- - **`format`** *(string)*: either `png` or `jpg`/`jpeg` or `webp` (Android). Defaults to `png`.
+ - **`format`** *(string)*: either `png` or `jpg`/`jpeg` or `webm` (Android). Defaults to `png`.
  - **`quality`** *(number)*: the quality. 0.0 - 1.0 (default). (only available on lossy formats like jpeg)
  - **`fullWebView`** *(boolean)*: capture the whole view when capturing webview.
  - **`scrollContent`** *(boolean)*: automatically scroll webview and capture.( only available when `fullWebView` is `true`). (iOS only)
@@ -56,6 +56,8 @@ Returns a Promise of the image URI.
 
 By default, takeSnapshot will export in a temporary folder and the snapshot file will be deleted as soon as the app leaves. If you use the `path` option, you make the snapshot file more permanent and at a specific file location. To make file location more 'universal', the library exports some classic directory constants:
 
+> If you use the `path` option, you own the file and manage its lifecycle: it won't get cleaned so be careful not leaking files on user's phone.
+
 ```js
 import { takeSnapshot, dirs } from "react-native-view-shot";
 // cross platform dirs:
@@ -70,18 +72,36 @@ takeSnapshot(viewRef, { path: PictureDir+"/foo.png" })
 );
 ```
 
+## Interoperability Table
+
+Model tested: iPhone 6 (iOS), Nexus 5 (Android).
+
+| System             | iOS                | Android           | Windows           |
+|--------------------|--------------------|-------------------|-------------------|
+| View,Text,Image,.. | YES                | YES               | YES               |                    
+| WebView            | YES                | YES<sup>1</sup>   | YES               |
+| gl-react v2        | YES                | NO<sup>2</sup>    | NO<sup>3</sup>    |
+| react-native-video | NO                 | NO                | NO
+| react-native-maps  | YES                | NO<sup>4</sup> | NO<sup>3</sup>
+
+>
+1. Only supported by wrapping a `<View collapsable={false}>` parent and snapshotting it.
+2. It returns an empty image (not a failure Promise).
+3. Component itself lacks platform support.
+4. But you can just use the react-native-maps snapshot function: https://github.com/airbnb/react-native-maps#take-snapshot-of-map
+
 ## Caveats
 
 If you want to snapshot a **WebView**, you need to embed the webview in a **View** and takeSnapshot of the view.
 
 Snapshots are not guaranteed to be pixel perfect. It also depends on the platform. Here is some difference we have noticed and how to workaround.
 
-- Support of special components like Video / GL views remains untested.
+- Support of special components like Video / GL views is not guaranteed to work. In case of failure, the `takeSnapshot` promise gets rejected (the library won't crash).
 - It's preferable to **use a background color on the view you rasterize** to avoid transparent pixels and potential weirdness that some border appear around texts.
 
 ### specific to Android implementation
 
-- you need to make sure `collapsable` is set to `false` if you want to snapshot a **View**. Otherwise that view won't reflect any UI View. ([found by @gaguirre](https://github.com/gre/react-native-view-shot/issues/7#issuecomment-245302844))
+- you need to make sure `collapsable` is set to `false` if you want to snapshot a **View**. Some content might even need to be wrapped into such `<View collapsable={false}>` to actually make them snapshotable! Otherwise that view won't reflect any UI View. ([found by @gaguirre](https://github.com/gre/react-native-view-shot/issues/7#issuecomment-245302844)
 - if you implement a third party library and want to get back a File, you must first resolve the `Uri`. the `file` result returns an `Uri` so it's consistent with iOS and you can give it to `Image.getSize` for instance.
 - if you run on Android L or above, and want to snapshot full content of **WebView**, you need to call `WebView.enableSlowWholeDocumentDraw()` in your `onCreate()` of `MainApplication.java` file. Otherwise it only snapshot the visible area.
 
@@ -123,10 +143,13 @@ react-native link react-native-view-shot
 
 #### Windows
 
-No support yet. Feel free to PR.
-
+1. In Visual Studio, in the solution explorer, right click on your solution then select `Add` ➜ `ExisitingProject`
+2. Go to `node_modules` ➜ `react-native-view-shot` and add `RNViewShot.csproj` (UWP) or optionally `RNViewShot.Net46.csproj` (WPF)
+3. In Visual Studio, in the solution explorer, right click on your Application project then select `Add` ➜ `Reference`
+4. Under the projects tab select `RNViewShot` (UWP) or `RNViewShot.Net46` (WPF)
 
 ## Thanks
 
 - To initial iOS work done by @jsierles in https://github.com/jsierles/react-native-view-snapshot
 - To React Native implementation of takeSnapshot in iOS by @nicklockwood
+- To Windows implementation by @ryanlntn
