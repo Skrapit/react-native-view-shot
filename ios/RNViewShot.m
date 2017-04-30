@@ -4,6 +4,7 @@
 #import <React/UIView+React.h>
 #import <React/RCTUtils.h>
 #import <React/RCTConvert.h>
+#import <React/RCTScrollView.h>
 #import <React/RCTUIManager.h>
 #import <React/RCTBridge.h>
 #import <React/RCTWebView.h>
@@ -55,21 +56,49 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         CGSize size = [RCTConvert CGSize:options];
         NSString *format = [RCTConvert NSString:options[@"format"] ?: @"png"];
         NSString *result = [RCTConvert NSString:options[@"result"] ?: @"file"];
-        BOOL isFullWebView = [RCTConvert BOOL:options[@"fullWebView"] ?: NO];
+        BOOL snapshotContentContainer = [RCTConvert BOOL:options[@"snapshotContentContainer"] ?: @"false"];
+      
+        //take snapshot of the whole webview content
+        BOOL shoudCaptureFullWebView = [RCTConvert BOOL:options[@"fullWebView"] ?: NO];
+      
+        //automatically scroll webview and capture.( only available when shoudCaptureFullWebView is true).
         BOOL isScrollContent = [RCTConvert BOOL:options[@"scrollContent"] ?: NO];
+      
+      
         double areaX = [RCTConvert double:options[@"areaX"] ?: @0.0];
         double areaY = [RCTConvert double:options[@"areaY"] ?: @0.0];
         double areaWidth = [RCTConvert double:options[@"areaWidth"] ?: @(view.bounds.size.width)];
         double areaHeight = [RCTConvert double:options[@"areaHeight"] ?: @(0.0)];
         NSString *folder = [RCTConvert NSString:options[@"folder"] ?: nil];
+      
+        //if this is enabled, it means the target is a wkwebview
+      // And it indicates webview's attribute: -webkit-overflow-scrolling:touch is enabled.(only available when fullWebView is true, iOS only).
         BOOL overflowTouchScrollEnabled = [RCTConvert BOOL:options[@"overflowTouchScrollEnabled"] ?: NO];
         
         int slicePage = [RCTConvert int:options[@"slicePage"] ?: @(0)];
         slicePage = MAX(0, slicePage);
-        
-        // Capture image
+      
+        UIView* rendered;
+        UIScrollView* scrollView;
+      
+        if (snapshotContentContainer) {
+          if (![view isKindOfClass:[RCTScrollView class]]) {
+            reject(RCTErrorUnspecified, [NSString stringWithFormat:@"snapshotContentContainer can only be used on a RCTScrollView. instead got: %@", view], nil);
+            return;
+          }
+          RCTScrollView* rctScrollView = view;
+          scrollView = rctScrollView.scrollView;
+          rendered = scrollView;
+        }
+        else {
+          rendered = view;
+        }
         if (size.width < 0.1 || size.height < 0.1) {
-            size = view.bounds.size;
+          size = snapshotContentContainer ? scrollView.contentSize : view.bounds.size;
+        }
+        if (size.width < 0.1 || size.height < 0.1) {
+          reject(RCTErrorUnspecified, [NSString stringWithFormat:@"The content size must not be zero or negative. Got: (%g, %g)", size.width, size.height], nil);
+          return;
         }
         areaX = (areaX >= 0.0) ? areaX: 0.0;
         areaY = (areaY >= 0.0) ? areaY: 0.0;
@@ -80,9 +109,8 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         BOOL success = NO;
         UIImage *image = nil;
         
-        UIView *contentView = view;
         if (view.subviews.count > 0) {
-            contentView = view.subviews[0];
+            rendered = view.subviews[0];
         }
         // Captured image handler
         void (^captureHandler)(NSArray *, RCTPromiseResolveBlock, RCTPromiseRejectBlock) = ^void(NSArray *imageArray, RCTPromiseResolveBlock resolve, RCTPromiseRejectBlock reject) {
@@ -168,16 +196,16 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
         };
         
         // Start capture
-        if (isFullWebView) {
+        if (shoudCaptureFullWebView) {
             // Snapshot full content of webview
-            if ([contentView isKindOfClass:[RCTView class]] && contentView.subviews.count > 0) {
+            if ([rendered isKindOfClass:[RCTView class]] && rendered.subviews.count > 0) {
                 UIView *scrollView = nil;
                 
-                if ([contentView.subviews[0] isKindOfClass:[RCTWebView class]]) {
-                    RCTWebView *rctWebView = contentView.subviews[0];
+                if ([rendered.subviews[0] isKindOfClass:[RCTWebView class]]) {
+                    RCTWebView *rctWebView = rendered.subviews[0];
                     scrollView = ((UIWebView *)rctWebView.subviews[0]).scrollView;
-                } else if ([contentView.subviews[0] isKindOfClass:[RCTView class]]) {
-                    RCTView *rctView = contentView.subviews[0];
+                } else if ([rendered.subviews[0] isKindOfClass:[RCTView class]]) {
+                    RCTView *rctView = rendered.subviews[0];
                     if (rctView.subviews.count > 0) {
                         scrollView = ((WKWebView *)rctView.subviews[0]).scrollView;
                     }
@@ -209,15 +237,36 @@ RCT_EXPORT_METHOD(takeSnapshot:(nonnull NSNumber *)target
                 }
             }
         } else {
+            CGPoint savedContentOffset;
+            CGRect savedFrame;
+            if (snapshotContentContainer) {
+              // Save scroll & frame and set it temporarily to the full content size
+              savedContentOffset = scrollView.contentOffset;
+              savedFrame = scrollView.frame;
+              scrollView.contentOffset = CGPointZero;
+              scrollView.frame = CGRectMake(0, 0, scrollView.contentSize.width, scrollView.contentSize.height);
+            }
             UIGraphicsBeginImageContextWithOptions(size, NO, 0);
             success = [view drawViewHierarchyInRect:(CGRect){CGPointZero, size} afterScreenUpdates:NO];
             image = UIGraphicsGetImageFromCurrentImageContext();
             UIGraphicsEndImageContext();
-            
-            if (!success || !image) {
-                reject(RCTErrorUnspecified, @"Failed to capture view snapshot", nil);
-                return;
+          
+            if (snapshotContentContainer) {
+              // Restore scroll & frame
+              scrollView.contentOffset = savedContentOffset;
+              scrollView.frame = savedFrame;
             }
+          
+            if (!success) {
+              reject(RCTErrorUnspecified, @"The view cannot be captured. drawViewHierarchyInRect was not successful. This is a potential technical or security limitation.", nil);
+              return;
+            }
+            
+            if (!image) {
+              reject(RCTErrorUnspecified, @"Failed to capture view snapshot. UIGraphicsGetImageFromCurrentImageContext() returned nil!", nil);
+              return;
+            }
+
             
             captureHandler(@[image], resolve, reject);
         }
